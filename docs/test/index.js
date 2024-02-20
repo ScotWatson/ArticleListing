@@ -64,14 +64,19 @@ function start([ evtWindow ]) {
       if (response.status !== 200) {
         throw "Bad Location";
       }
-      const contents = await response.arrayBuffer();
-      const iv = new ArrayBuffer();
-      const body;
+      const bytesEncrypted = await response.arrayBuffer();
+      const contentsView = new Uint8Array(contents);
+      const iv = bytesEncrypted.slice(0, 16);
+      const body = bytesEncrypted.slice(16);
+      const bytesDecrypted = await self.crypto.decrypt({
+        name: "AES-CBC",
+        iv: iv,
+      }, key, body);
       const DOMParser = new DOMParser();
       const UTF8Decoder = new TextDecoder();
-      UTF8Decoder.decode();
+      const strContents = UTF8Decoder.decode(bytesDecrypted);
       const xmlContent = parser.parseFromString(strContents, "text/xml");
-      xmlContent.
+      
     })();
   } catch (e) {
     console.error(e);
