@@ -75,8 +75,11 @@ function start([ evtWindow ]) {
       const DOMParser = new DOMParser();
       const UTF8Decoder = new TextDecoder();
       const strContents = UTF8Decoder.decode(bytesDecrypted);
-      const xmlContent = parser.parseFromString(strContents, "text/xml");
-      
+      const xmlContent = DOMParser.parseFromString(strContents, "text/xml");
+      console.log(xmlContent);
+      for (const node of xmlContent.childNodes) {
+        console.log(node);
+      }
     })();
   } catch (e) {
     console.error(e);
