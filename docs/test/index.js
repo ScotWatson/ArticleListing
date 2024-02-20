@@ -53,7 +53,7 @@ function start([ evtWindow ]) {
       strKey = window.prompt("Enter the target key: ");
     }
     let rawKey = atob(strKey);
-    conat bytesKey = new self.Uint8Array(rawKey.length);
+    const bytesKey = new self.Uint8Array(rawKey.length);
     for (let i = 0; i < rawKey.length; ++i) {
       bytesKey[i] = rawKey.charCodeAt(i);
     }
