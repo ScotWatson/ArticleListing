@@ -41,7 +41,7 @@ function createRequestGET(endpoint) {
 
 function start([ evtWindow ]) {
   try {
-    const urlThis = new self.URL(window.navigator.location);
+    const urlThis = new self.URL(window.location);
     const paramsThis = urlThis.searchParams;
     let strTarget = paramsThis.get("url");
     while (!strTarget) {
@@ -59,7 +59,7 @@ function start([ evtWindow ]) {
     }
     const requestTarget = createRequestGET(urlTarget);
     (async function () {
-      const key = await self.crypto.importKey("raw", "AES-CBC", false, [ "decrypt" ]);
+      const key = await self.crypto.subtle.importKey("raw", bytesKey, "AES-CBC", false, [ "decrypt" ]);
       const response = await fetch(requestTarget);
       if (response.status !== 200) {
         throw "Bad Location";
@@ -68,7 +68,7 @@ function start([ evtWindow ]) {
       const contentsView = new Uint8Array(contents);
       const iv = bytesEncrypted.slice(0, 16);
       const body = bytesEncrypted.slice(16);
-      const bytesDecrypted = await self.crypto.decrypt({
+      const bytesDecrypted = await self.crypto.subtle.decrypt({
         name: "AES-CBC",
         iv: iv,
       }, key, body);
