@@ -50,11 +50,11 @@ function start([ evtWindow ]) {
     document.body.appendChild(btnSave);
     btnSave.addEventListener("click", function (evt) {
       (async function () {
-        const key = await self.crypto.importKey("raw", bytesKey, "AES-CBC", false, [ "encrypt" ]);
+        const key = await self.crypto.subtle.importKey("raw", bytesKey, "AES-CBC", false, [ "encrypt" ]);
         const iv = new Uint8Array(16);
         self.crypto.getRandomValues(iv);
         const bytesDecrypted = await (new Blob([ iv, textarea.value ], "application/octet-stream")).arrayBuffer();
-        const bytesEncrypted = await self.crypto.encrypt({
+        const bytesEncrypted = await self.crypto.subtle.encrypt({
           name: "AES-CBC",
           iv: iv,
         }, key, bytesDecrypted);
