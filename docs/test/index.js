@@ -65,8 +65,8 @@ function start([ evtWindow ]) {
         throw "Bad Location";
       }
       const bytesEncrypted = await response.blob();
-      const iv = bytesEncrypted.slice(0, 16).arrayBuffer();
-      const body = bytesEncrypted.slice(16).arrayBuffer();
+      const iv = await bytesEncrypted.slice(0, 16).arrayBuffer();
+      const body = await bytesEncrypted.slice(16).arrayBuffer();
       const bytesDecrypted = await self.crypto.subtle.decrypt({
         name: "AES-CBC",
         iv: iv,
