@@ -53,12 +53,12 @@ function start([ evtWindow ]) {
         const key = await self.crypto.subtle.importKey("raw", bytesKey, "AES-CBC", false, [ "encrypt" ]);
         const iv = new Uint8Array(16);
         self.crypto.getRandomValues(iv);
-        const bytesDecrypted = await (new Blob([ iv, textarea.value ], { type: "application/octet-stream" })).arrayBuffer();
+        const bytesDecrypted = await (new Blob([ textarea.value ], { type: "application/octet-stream" })).arrayBuffer();
         const bytesEncrypted = await self.crypto.subtle.encrypt({
           name: "AES-CBC",
           iv: iv,
         }, key, bytesDecrypted);
-        const file = new Blob([ bytesEncrypted ], { type: "application/octet-stream" });
+        const file = new Blob([ iv, bytesEncrypted ], { type: "application/octet-stream" });
         const urlFile = URL.createObjectURL(file);
         const a = document.createElement("a");
         a.href = urlFile;
