@@ -48,7 +48,7 @@ function start([ evtWindow ]) {
     const btnSave = document.createElement("button");
     btnSave.innerHTML = "Save";
     document.body.appendChild(btnSave);
-    btnSave.addEventListener(function (evt) {
+    btnSave.addEventListener("click", function (evt) {
       (async function () {
         const key = await self.crypto.importKey("raw", bytesKey, "AES-CBC", false, [ "encrypt" ]);
         const iv = new Uint8Array(16);
