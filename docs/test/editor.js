@@ -41,7 +41,7 @@ function createRequestGET(endpoint) {
 
 function start([ evtWindow ]) {
   try {
-    const bytesKey = new Uint8Array(16);
+    const bytesKey = new Uint8Array(32);
     self.crypto.getRandomValues(bytesKey);
     const textarea = document.createElement("textarea");
     document.body.appendChild(textarea);
@@ -68,9 +68,9 @@ function start([ evtWindow ]) {
       })();
     });
     const pKey = document.createElement("p");
-    const rawKey = "";
+    let rawKey = "";
     for (const byte of bytesKey) {
-      rawKey = String.fromCharCode(byte);
+      rawKey += String.fromCharCode(byte);
     }
     pKey.innerHTML = btoa(rawKey);
   } catch (e) {
