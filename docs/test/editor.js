@@ -73,6 +73,7 @@ function start([ evtWindow ]) {
       rawKey += String.fromCharCode(byte);
     }
     pKey.innerHTML = btoa(rawKey);
+    document.body.appendChild(pKey);
   } catch (e) {
     console.error(e);
   }
