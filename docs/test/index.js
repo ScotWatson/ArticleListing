@@ -71,10 +71,10 @@ function start([ evtWindow ]) {
         name: "AES-CBC",
         iv: iv,
       }, key, body);
-      const DOMParser = new DOMParser();
+      const myDOMParser = new DOMParser();
       const UTF8Decoder = new TextDecoder();
       const strContents = UTF8Decoder.decode(bytesDecrypted);
-      const xmlContent = DOMParser.parseFromString(strContents, "text/xml");
+      const xmlContent = myDOMParser.parseFromString(strContents, "text/xml");
       console.log(xmlContent);
       for (const node of xmlContent.childNodes) {
         console.log(node);
