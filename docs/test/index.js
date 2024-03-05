@@ -41,9 +41,9 @@ function createRequestGET(endpoint) {
 
 function start([ evtWindow ]) {
   try {
-    const urlThis = new self.URL(window.location);
-    const paramsThis = urlThis.searchParams;
-    let strTarget = paramsThis.get("url");
+    const selfURL = new self.URL(window.location);
+    const selfParams = new URLSearchParams(selfURL.hash.substring(1));
+    let strTarget = selfParams.get("url");
     while (!strTarget) {
       strTarget = window.prompt("Enter the target url: ");
     }
@@ -74,6 +74,7 @@ function start([ evtWindow ]) {
       const myDOMParser = new DOMParser();
       const UTF8Decoder = new TextDecoder();
       const strContents = UTF8Decoder.decode(bytesDecrypted);
+      document.body.append(strContents);
       const xmlContent = myDOMParser.parseFromString(strContents, "text/xml");
       console.log(xmlContent);
       for (const node of xmlContent.childNodes) {
