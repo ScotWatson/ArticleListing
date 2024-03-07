@@ -6,32 +6,66 @@
 (c) 2024 Scot Watson  All Rights Reserved
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     -->
-    <title>Article Listing</title>
+    <title>Article Editor</title>
+    <script>
+class SiteStorage {
+  constructor(args) {
+    const { uri, storage } = args;
+    this.#prefix = storage.getItem(uri);
+    if (this.#prefix === null) {
+      const view = new Uint8Array(12);
+      self.crypto.getRandomValues(view);
+      let rawStr = "";
+      for (let i = 0; i < 12; i++) {
+        rawStr += view[i];
+      }
+      this.#prefix = btoa(rawStr);
+      storage.setItem(uri, this.#prefix);
+    }
+  }
+  getItem(key) {
+    return storage.getItem(this.#prefix + key);
+  }
+  setItem(key, item) {
+    storage.setItem(this.#prefix + key, item);
+  }
+  removeItem(key) {
+    storage.removeItem(this.#prefix + key);
+  }
+}
+    </script>
     <script>
 (function () {
   const latestVersion = "20240305";
-  const storedVersion = window.sessionStorage.getItem("version");
   const selfURL = new URL(window.location);
   const requestedVersion = selfURL.searchParams.get("version");
+  const pathSegments = selfURL.pathname.split("/");
+  self._siteURI = function () {
+    return selfURL.origin + "/" + pathSegments[0] + "/index";
+  }
+  window.siteSessionStorage = new SiteStorage({
+    uri: self._siteURI(),
+    storage: window.sessionStorage,
+  });
+  const storedVersion = window.siteSessionStorage.getItem("version");
   if (requestedVersion !== null) {
-    window.sessionStorage.setItem("version", requestedVersion);
+    window.siteSessionStorage.setItem("version", requestedVersion);
     const newSearchParams = new URLSearchParams(selfURL.searchParams.toString());
     newSearchParams.delete("version");
     const newURL = new URL(selfURL.protocol + "//" + selfURL.host + selfURL.pathname + ((newSearchParams.size === 0) ? "" : "?" + newSearchParams.toString()) + selfURL.hash);
     window.history.replaceState(null, "", newURL.toString());
   } else if (storedVersion !== null) {
-    window.sessionStorage.setItem("version", storedVersion);
+    window.siteSessionStorage.setItem("version", storedVersion);
   } else {
-    window.sessionStorage.setItem("version", latestVersion);
+    window.siteSessionStorage.setItem("version", latestVersion);
   }
-  const version = window.sessionStorage.getItem("version");
+  self._version = function () {
+    return window.siteSessionStorage.getItem("version");
+  }
   const scriptElem = document.createElement("script");
-  scriptElem.src = "./" + version + "/index.js";
+  scriptElem.src = "./" + self._version() + "/editor.js";
   document.head.appendChild(scriptElem);
 })();
-function _version() {
-  return window.sessionStorage.getItem("version");
-}
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
