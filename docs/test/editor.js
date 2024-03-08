@@ -39,8 +39,91 @@ function createRequestGET(endpoint) {
   });
 }
 
+const DOMPARSER = new self.DOMParser();
+
 function start([ evtWindow ]) {
   try {
+    const selfURL = new self.URL(window.location);
+    const fragmentParams = new self.URLSearchParams(selfURL.hash.substring(1));
+    const bootstrapUrl = fragmentParams.get("bootstrap");
+    fetch(bootstrapUrl).then(parseBootstrap);
+    const masterKeyString = window.prompt("Enter key:");
+    async function parseBootstrap(response) {
+      const masterKeyRaw = atob(masterKeyString);
+      const masterKey = await new self.Blob([ masterKeyRaw ]).arrayBuffer();
+      const hashedKey = await self.crypto.subtle.digest("SHA-256", masterKey);
+      if (response.status === 200) {
+        throw "Error retrieving bootstrap file";
+      }
+      const contents = await response.text();
+      const xml = DOMPARSER.parseFromString(contents, "application/xml");
+      const xmlVersion = xml.documentElement.getAttribute("version");
+      if (xmlVersion === "") {
+        throw "Missing version attribute";
+      }
+      if (xml.documentElement.name !== "servers") {
+        throw "bootstrap file must contain servers";
+      }
+      for (const node of xml.documentElement.childNodes) {
+        switch (node.name) {
+          case "hashtest": {
+            const saltString = node.getAttribute("salt");
+            const saltPromise = base64Decode(saltString).then(function (salt) {
+              const saltedKey = new self.Blob ([ masterKey, salt ]).arrayBuffer();
+              return self.crypto.subtle.digest("SHA-256", saltedKey);
+            });
+            const hashStrings = node.textContent.split(" ");
+            const hashPromises = hashStrings.map(base64Decode);
+            async function base64Decode(str) {
+              return await new self.Blob ([ atob(saltString) ]).arrayBuffer();
+            }
+            
+            Promise.all([ hashPromises..., saltPromise ]);
+            
+          }
+            break;
+          case "server": {
+            
+          }
+            break;
+          default: {
+            
+          }
+        }
+      }
+    }
+    const btnOpenClientFile = document.createElement("button");
+    btnOpenClientFile.innerHTML = "Open Client File";
+    document.body.appendChild(btnOpenClientFile);
+    btnOpenClientFile.addEventListener("click", function (evt) {
+      const inpFile = document.createElement("input");
+      inpFile.type = "file";
+      document.body.appendChild(inpFile);
+      inpFile.click();
+      inpFile.remove();
+      parseClients(inpFile.files[0]);
+    });
+    document.createElement("table");
+    async function parseClients(file) {
+      const contents = await file.text();
+      const xml = new self.DOMParser(contents);
+      if (xml.documentElement.name !== "clients") {
+        throw "client file must contain clients";
+      }
+      const xmlVersion = xml.documentElement.getAttribute("version");
+      for (const clientNode of xml.documentElement.childNodes) {
+        const divClient = document.createElement("div");
+        switch (clientNode.name) {
+          case "client": {
+            const name = clientNode.getAttribute("name");
+            divClient.append(name);
+          }
+          default: {
+            // Unrecognized node
+          }
+        };
+      }
+    }
     const bytesKey = new Uint8Array(32);
     self.crypto.getRandomValues(bytesKey);
     const textarea = document.createElement("textarea");
