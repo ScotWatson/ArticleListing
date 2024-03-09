@@ -9,10 +9,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <title>Article Editor</title>
     <script src="https://scotwatson.github.io/WebInterface/common.js"></script>
     <script>
+const selfURL = new URL(window.location);
+const pathSegments = selfURL.pathname.split("/");
 init({
   latestVersion: "20240305",
   siteURI: function () {
-    return selfURL.origin + "/" + pathSegments[0] + "/index";
+    return selfURL.origin + "/" + pathSegments[0] + "/editor";
   },
 });
     </script>
