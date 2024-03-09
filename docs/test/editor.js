@@ -39,7 +39,8 @@ function createRequestGET(endpoint) {
   });
 }
 
-const DOMPARSER = new self.DOMParser();
+const DOM_PARSER = new self.DOMParser();
+const XML_SERIALIZER = new self.XmlSerializer();
 
 function start([ evtWindow ]) {
   try {
@@ -48,46 +49,82 @@ function start([ evtWindow ]) {
     const bootstrapUrl = fragmentParams.get("bootstrap");
     fetch(bootstrapUrl).then(parseBootstrap);
     const masterKeyString = window.prompt("Enter key:");
+
+    let masterKey = new self.Uint8Array(32);  // 256-bit key
+    self.crypto.getRandomValues(masterKey);
+    let bootstrap = {
+      protocols: new Map(),
+    };
+    bootstrap.protocols.add({
+      name: "",
+      params: [],
+    });
+    
+    bootstrapXML
+    
     async function parseBootstrap(response) {
-      const masterKeyRaw = atob(masterKeyString);
-      const masterKey = await new self.Blob([ masterKeyRaw ]).arrayBuffer();
-      const hashedKey = await self.crypto.subtle.digest("SHA-256", masterKey);
       if (response.status === 200) {
         throw "Error retrieving bootstrap file";
       }
       const contents = await response.text();
-      const xml = DOMPARSER.parseFromString(contents, "application/xml");
+      const xml = DOM_PARSER.parseFromString(contents, "application/xml");
       const xmlVersion = xml.documentElement.getAttribute("version");
       if (xmlVersion === "") {
         throw "Missing version attribute";
       }
-      if (xml.documentElement.name !== "servers") {
-        throw "bootstrap file must contain servers";
+      if (xml.documentElement.name !== "bootstrap") {
+        throw "bootstrap file must contain bootstrap";
       }
-      for (const node of xml.documentElement.childNodes) {
-        switch (node.name) {
-          case "hashtest": {
-            const saltString = node.getAttribute("salt");
-            const saltPromise = base64Decode(saltString).then(function (salt) {
-              const saltedKey = new self.Blob ([ masterKey, salt ]).arrayBuffer();
-              return self.crypto.subtle.digest("SHA-256", saltedKey);
-            });
-            const hashStrings = node.textContent.split(" ");
-            const hashPromises = hashStrings.map(base64Decode);
-            async function base64Decode(str) {
-              return await new self.Blob ([ atob(saltString) ]).arrayBuffer();
+      switch (xmlVersion) {
+        case "0Bdh5ULh": {
+          parseBootstrap_0Bdh5ULh(xml);
+        }
+          break;
+        default: {
+          throw "Unrecognized bootstrap file version";
+        }
+      }
+      function saveBootstrap(bootstrap) {
+        const bootstrapXML = DOM_PARSER.parseFromString("<bootstrap></bootstrap>", "application/xml");
+        bootstrapXML.documentElement.setAttribute("version", "0Bdh5ULh");
+        const hashtestNode = new Node();
+        hashtestNode.name = "hashtest";
+        const salt = new Uint8Array(6);
+        self.crypto.getRandomValues(salt);
+        const saltString = btoa(await (new self.Blob ([ salt ])).text());
+        hashtestNode.setAttribute("salt", saltString);
+        
+        XML_SERIALIZER.serializeToString(bootstrapXML);
+      }
+      function parseBootstrap_0Bdh5ULh(xml) {
+        const masterKeyRaw = self.atob(masterKeyString);
+        const masterKey = await (new self.Blob([ masterKeyRaw ])).arrayBuffer();
+        const hashedKey = await self.crypto.subtle.digest("SHA-256", masterKey);
+        for (const node of xml.documentElement.childNodes) {
+          switch (node.name) {
+            case "hashtest": {
+              const saltString = node.getAttribute("salt");
+              const saltPromise = base64Decode(saltString).then(function (salt) {
+                const saltedKey = new self.Blob ([ masterKey, salt ]).arrayBuffer();
+                return self.crypto.subtle.digest("SHA-256", saltedKey);
+              });
+              const hashStrings = node.textContent.split(" ");
+              const hashPromises = hashStrings.map(base64Decode);
+              async function base64Decode(str) {
+                return await new self.Blob ([ atob(saltString) ]).arrayBuffer();
+              }
+              
+              Promise.all([ hashPromises..., saltPromise ]);
+              
             }
-            
-            Promise.all([ hashPromises..., saltPromise ]);
-            
-          }
-            break;
-          case "server": {
-            
-          }
-            break;
-          default: {
-            
+              break;
+            case "server": {
+              
+            }
+              break;
+            default: {
+              
+            }
           }
         }
       }
