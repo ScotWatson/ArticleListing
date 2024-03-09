@@ -60,8 +60,6 @@ function start([ evtWindow ]) {
       params: [],
     });
     
-    bootstrapXML
-    
     async function parseBootstrap(response) {
       if (response.status === 200) {
         throw "Error retrieving bootstrap file";
@@ -84,41 +82,81 @@ function start([ evtWindow ]) {
           throw "Unrecognized bootstrap file version";
         }
       }
-      function saveBootstrap(bootstrap) {
-        const bootstrapXML = DOM_PARSER.parseFromString("<bootstrap></bootstrap>", "application/xml");
+      async function base64Encode(bytes) {
+        return self.btoa(await (new self.Blob ([ bytes ])).text());
+      }
+      async function base64Decode(str) {
+        return await (new self.Blob ([ self.atob(str) ])).arrayBuffer();
+      }
+      async function saveBootstrap(bootstrap, users) {
+        const bootstrapXML = document.implementation.createDocument(null, "bootstrap");
         bootstrapXML.documentElement.setAttribute("version", "0Bdh5ULh");
-        const hashtestNode = new Node();
-        hashtestNode.name = "hashtest";
+        const hashtestNode = bootstrapXML.createElement("hashtest");
+        const usersArray = Array.from(users.values());
+        usersArray.sort(function (a, b) {
+          return (Math.random() < 0.5);
+        });
         const salt = new Uint8Array(6);
         self.crypto.getRandomValues(salt);
-        const saltString = btoa(await (new self.Blob ([ salt ])).text());
+        const saltString = await base64Encode(salt);
         hashtestNode.setAttribute("salt", saltString);
-        
-        XML_SERIALIZER.serializeToString(bootstrapXML);
+        for (const user of usersArray) {
+          const saltedKey = await (new self.Blob ([ user.key, salt ])).arrayBuffer();
+          const hashedSaltedKey = await self.crypto.subtle.digest("SHA-256", saltedKey);
+          const hashedSaltedKeyString = base64Encode(hashedSaltedKey);
+          hashtestNode.textContent += " " + hashedSaltedKeyString;
+        }
+        hashtestNode.textContent += hashtestNode.textContent.substring(1);
+        bootstrapXML.documentElement.appendChild(hashtestNode);
+        for (const protocol of bootstrap.protocols) {
+          const protocolNode = bootstrapXML.createElement("protocol");
+          protocolNode.setAttribute("name", protocol.name);
+          for (const parameter of protocol.parameters) {
+            const parameterNode = bootstrapXML.createElement("parameter");
+            parameterNode.setAttribute("name", parameter.name);
+            parameterNode.setAttribute("type", parameter.type);
+            switch (parameter.type) {
+              case "public": {
+                parameterNode.textContent = parameter.value;
+              }
+              case "private": {
+                const iv = new Uint8Array(16);
+                const ivString = base64Encode(iv);
+                parameterNode.textContent = ivString;
+                for (const user of users) {
+                  const value = parameter.value.get(user.key);
+                  const key = await self.crypto.subtle.importKey("raw", user.key, {name: "AES-CBC"}, false, [ "encrypt" ]);
+                  const encryptedValue = await self.crypto.subtle.encrypt({name: "AES-CBC", iv: iv}, key, value);
+                  const encryptedValueString = await base64Encode(encryptedValue);
+                  parameterNode.textContent += " " + encryptedValueString;
+                }
+              }
+              default: {
+                throw "Unrecognized parameter type";
+              }
+            }
+            protocolNode.appendChild(parameterNode);
+          }
+          bootstrapXML.documentElement.appendChild(protocolNode);
+        }
+        return XML_SERIALIZER.serializeToString(bootstrapXML);
       }
-      function parseBootstrap_0Bdh5ULh(xml) {
-        const masterKeyRaw = self.atob(masterKeyString);
-        const masterKey = await (new self.Blob([ masterKeyRaw ])).arrayBuffer();
+      async function parseBootstrap_0Bdh5ULh(bootstrapXML, users) {
+        const masterKey = await base64Decode(masterKeyString);
         const hashedKey = await self.crypto.subtle.digest("SHA-256", masterKey);
         for (const node of xml.documentElement.childNodes) {
-          switch (node.name) {
+          switch (node.nodeName) {
             case "hashtest": {
               const saltString = node.getAttribute("salt");
-              const saltPromise = base64Decode(saltString).then(function (salt) {
-                const saltedKey = new self.Blob ([ masterKey, salt ]).arrayBuffer();
-                return self.crypto.subtle.digest("SHA-256", saltedKey);
-              });
+              const salt = await base64Decode(saltString);
+              const saltedKey = await (new self.Blob ([ masterKey, salt ])).arrayBuffer();
+              const hashedSaltedKey = self.crypto.subtle.digest("SHA-256", saltedKey);
+              const hashedSaltedKeyString = base64Encode(hashedSaltedKey);
               const hashStrings = node.textContent.split(" ");
-              const hashPromises = hashStrings.map(base64Decode);
-              async function base64Decode(str) {
-                return await new self.Blob ([ atob(saltString) ]).arrayBuffer();
-              }
-              
-              Promise.all([ hashPromises..., saltPromise ]);
-              
+              const userIndex = hashStrings.findIndexOf(hashedSaltedKeyString);
             }
               break;
-            case "server": {
+            case "protocol": {
               
             }
               break;
